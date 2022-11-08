@@ -1,0 +1,33 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+    <script>
+        const btn = document.getElementById("plusBtn");
+        function plus(){
+            const arg1 = document.getElementById("arg1").value;
+            const arg2 = document.getElementById("arg2").value;
+            document.location.href = `./cgi-bin/adder?${arg1}&${arg2}`;
+        }
+    </script>
+</head>
+<body> 
+<div>
+   <center><h1 style="padding-top: 10;">나만의 짱구 이야기</h1></center>
+   <center>
+    <p><img src="zzang.gif"></p>
+    <p style="font-size: xx-large"><strong>어떡하지🎶 어떡하지~</strong></p>
+    <p><audio controls src="kids.mp3"></audio></p>
+
+    
+    <input type="text" id="arg1">
+    <input type="text" id="arg2">
+    <button onclick="plus()" id = "plusBtn">더하기</button>
+
+</center>
+
+
+</div>
+
+</body>
+</html>
