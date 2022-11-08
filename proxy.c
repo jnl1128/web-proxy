@@ -13,18 +13,20 @@ static const char *user_agent_hdr =
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
 int parse_uri(char *uri, char *filename, char *cgiargs);
 int read_responsehdrs(rio_t *rp, int fd);
-void read_requesthdrs(rio_t *rp, char* host_header);
+void read_requesthdrs(rio_t *rp, char* h_host, char* h_port);
 void doit(int fd);
 int parse_requestline(char *buf, char *method, char* hostname, char* port, char*uri, char *filename, char *version);
 void do_request(int fd, char *hostname, char *method, char *filename);
 void do_response(rio_t *rio, int fd);
+int is_valid(int fd, char *method, char *hostname, char *port, char *version, char *h_host, char *h_port);
 
-void read_requesthdrs(rio_t *rp, char* host_header){
+void read_requesthdrs(rio_t *rp, char* h_host, char* h_port){
   char buf[MAXLINE];
   Rio_readlineb(rp, buf, MAXLINE);
-  while(strcmp(buf, "\r\n")){
+  while (strcmp(buf, "\r\n"))
+  {
     if (strstr(buf, "Host: ")){
-      host_header = index(buf, ":") + 1;
+      sscanf(buf, "%*[^:]%*[: ]%[^:]:%s", h_host, h_port);
     }
     Rio_readlineb(rp, buf, MAXLINE);
   }
@@ -90,28 +92,27 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
 }
 
 
-int is_valid(int fd,char *method, char*hostname, char*port, char*version, char* host_header){
-  char h_hostname[MAXLINE], h_port[MAXLINE];
+int is_valid(int fd,char *method, char*hostname, char*port, char*version, char* h_host, char* h_port){
   if (strcasecmp(method, "GET"))
   {
     clienterror(fd, method, "501", "Not implemented", "Proxy does not implement this method");
     return -1;
   }
-  // if (!strcasecmp(version, "HTTP/1.1")){
-  //   if (strlen(host_header)){
-  //     sscanf(host_header, "%[^:]:%s", h_hostname, h_port);
-  //     if (strcasecmp(hostname, h_hostname)){
-  //       clienterror(fd, hostname, "400", "Bad Request", "Hostname of request line and of host header differ");
-  //       return -1;
-  //     }
-  //     if (strlen(h_port) != 0 && strcasecmp(port, h_port)){
-  //       clienterror(fd, hostname, "400", "Bad Request", "Port number of request line and of host header differ");
-  //       return -1;
-  //     }
-  //   }
-  //   clienterror(fd, version, "400", "Bad Request", "HTTP/1.1 requires Host header");
-  //   return -1;
-  // }
+  if (!strcasecmp(version, "HTTP/1.1")){
+    if (strlen(h_host) > 0){
+      if (strcasecmp(h_host, hostname)){
+        clienterror(fd, hostname, "400", "Bad Request", "Hostname of request line and of host header differ");
+        return -1;
+      }
+      if (strlen(h_port) != 0 && strcasecmp(h_port, port)){
+        clienterror(fd, hostname, "400", "Bad Request", "Port number of request line and of host header differ");
+        return -1;
+      }
+      return 0;
+    }
+    clienterror(fd, version, "400", "Bad Request", "HTTP/1.1 requires Host header");
+    return -1;
+  }
   return 0;
 }
 
@@ -147,7 +148,7 @@ void do_response(rio_t* rio, int fd){
 }
 
 void doit(int fd){
-  char buf[MAXLINE], method[MAXLINE], hostname[MAXLINE], port[MAXLINE], filename[MAXLINE], uri[MAXLINE], version[MAXLINE], host_header[MAXLINE];
+  char buf[MAXLINE], method[MAXLINE], hostname[MAXLINE], port[MAXLINE], filename[MAXLINE], uri[MAXLINE], version[MAXLINE], h_host[MAXLINE], h_port[MAXLINE];
   rio_t rio;
   int clientfd;
 
@@ -156,9 +157,8 @@ void doit(int fd){
  
   parse_requestline(buf, method, hostname, port, uri, filename, version);
 
-  read_requesthdrs(&rio, host_header);
-
-  if(is_valid(fd, method, hostname, port, version, host_header) == -1)
+  read_requesthdrs(&rio, h_host, h_port);
+  if (is_valid(fd, method, hostname, port, version, h_host, h_port) == -1)
     return;
 
   clientfd = Open_clientfd(hostname, port);
