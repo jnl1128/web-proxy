@@ -28,7 +28,6 @@ void doit(int fd){
   /* Read request line and headers */
   Rio_readinitb(&rio, fd);
   Rio_readlineb(&rio, buf, MAXLINE);
-  printf("Request headers:\n");
   printf("%s", buf);
   sscanf(buf, "%s %s %s", method, uri, version);
   /* only "GET" method is available in TINY SERVER */
